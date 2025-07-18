@@ -8,7 +8,6 @@ initConfiguration:
         content: |
           {{CONTENT}}
       postRunCommands:
-      - 
       - chmod +x /tmp/script.py
       - export $(snap run --shell microk8s -c 'env' | grep 'SNAP' | xargs) && python3 /tmp/script.py
 ```

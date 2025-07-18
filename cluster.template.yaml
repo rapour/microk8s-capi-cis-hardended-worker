@@ -63,7 +63,7 @@ metadata:
   namespace: default
 spec:
   clusterName: sample-capi-cluster
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels: null
   template:
