@@ -1,0 +1,112 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: sample-capi-cluster
+  namespace: default
+spec:
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: MicroK8sControlPlane
+    name: sample-capi-cluster-control-plane
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: MaasCluster
+    name: sample-capi-cluster
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: MaasCluster
+metadata:
+  name: sample-capi-cluster
+  namespace: default
+spec:
+  dnsDomain: atx.orangebox.me
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: MicroK8sControlPlane
+metadata:
+  name: sample-capi-cluster-control-plane
+  namespace: default
+spec:
+  controlPlaneConfig:
+    clusterConfiguration:
+      portCompatibilityRemap: true
+    initConfiguration:
+      IPinIP: true
+      addons:
+      - dns
+      - cis-hardening
+      joinTokenTTLInSecs: 9000
+  machineTemplate:
+    infrastructureTemplate:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      kind: MaasMachineTemplate
+      name: sample-capi-cluster-control-plane
+  replicas: 1
+  version: v1.28.0
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: MaasMachineTemplate
+metadata:
+  name: sample-capi-cluster-control-plane
+  namespace: default
+spec:
+  template:
+    spec:
+      image: ubuntu/jammy
+      minCPU: 1
+      minMemory: 1
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: sample-capi-cluster-md-0
+  namespace: default
+spec:
+  clusterName: sample-capi-cluster
+  replicas: 0
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: MicroK8sConfigTemplate
+          name: sample-capi-cluster-md-0
+      clusterName: sample-capi-cluster
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: MaasMachineTemplate
+        name: sample-capi-cluster-md-0
+      version: 1.27.16
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: MaasMachineTemplate
+metadata:
+  name: sample-capi-cluster-md-0
+  namespace: default
+spec:
+  template:
+    spec:
+      image: ubuntu/jammy
+      minCPU: 1
+      minMemory: 1
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: MicroK8sConfigTemplate
+metadata:
+  name: sample-capi-cluster-md-0
+  namespace: default
+spec:
+  template:
+    spec:
+     initConfiguration:
+      extraWriteFiles:
+      - path: /tmp/script.py
+        owner: root:root
+        permissions: "0777"
+        content: |
+          {{CONTENT}}
+      postRunCommands: 
+      - chmod +x /tmp/script.py
+      - export $(snap run --shell microk8s -c 'env' | grep 'SNAP' | xargs) && python3 /tmp/script.py
